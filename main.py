@@ -10,12 +10,28 @@ def draw_bg():
     screen.blit(bg_surface, (bg_x_pos, 0))
     screen.blit(bg_surface, (bg_x_pos + sWidth, 0))
 
+def draw_night():
+    fade = int((score * 4) % 1024)
+    print(fade)
+    if 256 < fade < 511:
+        bg_surface_night.set_alpha(fade - 256)
+    elif 767 < fade < 1024:
+        bg_surface_night.set_alpha(1023 - fade)
+    elif fade > 256:
+        bg_surface_night.set_alpha(255)
+    else:
+        bg_surface_night.set_alpha(0)
+
+    screen.blit(bg_surface_night, (bg_x_pos, 0))
+    screen.blit(bg_surface_night, (bg_x_pos + sWidth, 0))
+
 def create_pipe():
     global last_gap
     if pipe_list:
         last_pipe_height = pipe_list[-2].top
         height = random.randint(max(400, last_pipe_height - 100), min(last_pipe_height + 100, 800))
-        gap = random.randint(max(200, last_gap - 50), min(500, last_gap + 50))
+        gap = random.randint(max(GAP_SIZE[0], last_gap - 50), min(GAP_SIZE[1], last_gap + 50))
+        last_gap = gap
         bottom_pipe = pipe_surface.get_rect(midtop=(700, height))
         top_pipe = pipe_surface.get_rect(midbottom=(700, height - gap))
         return bottom_pipe, top_pipe
@@ -28,6 +44,8 @@ def create_pipe():
 def move_pipes(pipes):
     for pipe in pipes:
         pipe.centerx -= 3
+        if pipe.centerx <- 50:
+            pipes.pop(pipes.index(pipe))
     return pipes
 
 def draw_pipes(pipes):
@@ -36,6 +54,25 @@ def draw_pipes(pipes):
             screen.blit(pipe_surface, pipe)
         else:
             flip_pipe = pygame.transform.flip(pipe_surface, False, True)
+            screen.blit(flip_pipe, pipe)
+
+def night_pipes(pipes):
+    global score
+    fade = (score * 4) % 1024
+    if 256 < fade < 511:
+        red_pipe_surface.set_alpha(fade - 256)
+    elif 767 < fade < 1023:
+        red_pipe_surface.set_alpha(1023 - fade)
+    elif fade > 256:
+        red_pipe_surface.set_alpha(255)
+    else:
+        red_pipe_surface.set_alpha(0)
+
+    for pipe in pipes:
+        if pipe.bottom >= 1024:
+            screen.blit(red_pipe_surface, pipe)
+        else:
+            flip_pipe = pygame.transform.flip(red_pipe_surface, False, True)
             screen.blit(flip_pipe, pipe)
 
 def check_collision(pipes):
@@ -85,6 +122,15 @@ def pipe_score_check():
         if pipe.centerx < 0:
             can_score = True
 
+def score_based_upgrades():
+    global score, bg_surface, pipe_surface
+    if 50 < score < 51:
+        bg_surface = pygame.image.load('assets/background-night.png').convert()
+        bg_surface = pygame.transform.scale2x(bg_surface)
+
+        pipe_surface = pygame.image.load('assets/pipe-red.png')
+        pipe_surface = pygame.transform.scale2x(pipe_surface)
+
 pygame.mixer.pre_init()
 pygame.init()
 screen = pygame.display.set_mode((sWidth, sHeight))
@@ -100,9 +146,15 @@ score = 0
 high_score = 0
 can_score = True
 last_gap = 300
+GAP_SIZE = [250, 500]
+
+controls_surface = pygame.image.load('assets/base_controls.png').convert_alpha()
+controls_surface = pygame.transform.scale2x(controls_surface)
 
 bg_surface = pygame.image.load('assets/background-day.png').convert()
 bg_surface = pygame.transform.scale2x(bg_surface)
+bg_surface_night = pygame.image.load('assets/background-night.png').convert_alpha()
+bg_surface_night = pygame.transform.scale2x(bg_surface_night)
 bg_x_pos = 0
 
 floor_surface = pygame.image.load('assets/base.png').convert()
@@ -122,6 +174,9 @@ pygame.time.set_timer(BIRDFLAP, 50)
 
 pipe_surface = pygame.image.load('assets/pipe-green.png')
 pipe_surface = pygame.transform.scale2x(pipe_surface)
+red_pipe_surface = pygame.image.load('assets/pipe-green-night.png')
+red_pipe_surface = pygame.transform.scale2x(red_pipe_surface)
+
 pipe_list = []
 SPAWNPIPE = pygame.USEREVENT
 pygame.time.set_timer(SPAWNPIPE, 300)
@@ -137,9 +192,28 @@ score_sound_countdown = 300
 
 while True:
     keys = pygame.key.get_pressed()
+
     if game_active:
         if keys[pygame.K_SPACE]:
             bird_movement -= .3
+
+        if keys[pygame.K_q]:
+            bird_downflap = pygame.transform.scale2x(pygame.image.load('assets/bluebird-downflap.png').convert_alpha())
+            bird_midflap = pygame.transform.scale2x(pygame.image.load('assets/bluebird-midflap.png').convert_alpha())
+            bird_upflap = pygame.transform.scale2x(pygame.image.load('assets/bluebird-upflap.png').convert_alpha())
+            bird_frames = [bird_downflap, bird_midflap, bird_upflap]
+
+        if keys[pygame.K_w]:
+            bird_downflap = pygame.transform.scale2x(pygame.image.load('assets/yellowbird-downflap.png').convert_alpha())
+            bird_midflap = pygame.transform.scale2x(pygame.image.load('assets/yellowbird-midflap.png').convert_alpha())
+            bird_upflap = pygame.transform.scale2x(pygame.image.load('assets/yellowbird-upflap.png').convert_alpha())
+            bird_frames = [bird_downflap, bird_midflap, bird_upflap]
+
+        if keys[pygame.K_e]:
+            bird_downflap = pygame.transform.scale2x(pygame.image.load('assets/redbird-downflap.png').convert_alpha())
+            bird_midflap = pygame.transform.scale2x(pygame.image.load('assets/redbird-midflap.png').convert_alpha())
+            bird_upflap = pygame.transform.scale2x(pygame.image.load('assets/redbird-upflap.png').convert_alpha())
+            bird_frames = [bird_downflap, bird_midflap, bird_upflap]
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -153,20 +227,25 @@ while True:
             bird_movement = -4
             score = 0
             score_sound_countdown = 300
+            bg_surface_night.set_alpha(0)
 
         if event.type == SPAWNPIPE:
             pipe_list.extend(create_pipe())
 
-        if event.type == BIRDFLAP:
+        if event.type == BIRDFLAP and keys[pygame.K_SPACE]:
             if bird_index < 2:
                 bird_index += 1
             else:
                 bird_index = 0
             bird_surface, bird_rect = bird_animation()
-
+        else:
+            bird_index = 0
+            bird_surface, bird_rect = bird_animation()
     # BG
     bg_x_pos -= 1
     draw_bg()
+    draw_night()
+
     if bg_x_pos <= -576:
         bg_x_pos = 0
 
@@ -181,11 +260,13 @@ while True:
         # Pipes
         pipe_list = move_pipes(pipe_list)
         draw_pipes(pipe_list)
+        night_pipes(pipe_list)
 
         # Score
         score_display('main_game')
         pipe_score_check()
-
+        score += .01
+        #score_based_upgrades()
 
     else:
         screen.blit(game_over_surface, game_over_rect)
@@ -196,6 +277,7 @@ while True:
     # Floor
     floor_x_pos -= 3
     draw_floor()
+    #screen.blit(controls_surface, (0, 900))
 
     if floor_x_pos <= -576:
         floor_x_pos = 0
