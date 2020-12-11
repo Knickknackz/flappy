@@ -28,7 +28,7 @@ def draw_night():
     screen.blit(bg_surface_night, (bg_x_pos + sWidth, 0))
 
 
-def create_laser(color):
+def create_laser():
     return red_laser.get_rect(midtop=(700, -100))
 
 
@@ -57,12 +57,13 @@ def move_pipes(pipes):
     return pipes
 
 
-def move_lasers(lasers):
+def move_lasers(lasers, colors):
     for laser in lasers:
         laser.centerx -= 3
         if laser.centerx < - 50:
+            colors.pop(lasers.index(laser))
             lasers.pop(lasers.index(laser))
-    return lasers
+    return lasers, colors
 
 
 def draw_pipes(pipes):
@@ -73,9 +74,14 @@ def draw_pipes(pipes):
             flip_pipe = pygame.transform.flip(pipe_surface, False, True)
             screen.blit(flip_pipe, pipe)
 
-def draw_lasers(lasers):
-    for laser in lasers:
-        screen.blit(red_laser, laser)
+def draw_lasers(lasers, colors):
+    for i in range(len(lasers)):
+        if colors[i] == 0:
+            screen.blit(red_laser, lasers[i])
+        elif colors[i] == 1:
+            screen.blit(blue_laser, lasers[i])
+        else:
+            screen.blit(yellow_laser, lasers[i])
 
 def night_pipes(pipes):
     global score
@@ -105,6 +111,18 @@ def check_collision(pipes):
         if bird_rect.colliderect(pipe):
             death_sound.play()
             return True
+    for i in range(len(laser_list)):
+        if bird_rect.colliderect(laser_list[i]):
+            if bird_color == 'blue' and laser_color_list[i] != 1:
+                death_sound.play()
+                return True
+            elif bird_color == 'red'and laser_color_list[i] != 0:
+                death_sound.play()
+                return True
+            elif bird_color == 'yellow' and laser_color_list[i] != 2:
+                death_sound.play()
+                return True
+
     return False
 
 
@@ -187,7 +205,10 @@ floor_surface = pygame.transform.scale2x(pygame.image.load('assets/base.png').co
 floor_x_pos = 0
 
 laser_list = []
-red_laser = pygame.image.load('assets/laser.png').convert_alpha()
+laser_color_list = []
+red_laser = pygame.image.load('assets/red_laser.png').convert_alpha()
+blue_laser = pygame.image.load('assets/blue_laser.png').convert_alpha()
+yellow_laser = pygame.image.load('assets/yellow_laser.png').convert_alpha()
 laser_types = [red_laser]
 
 bird_downflap = pygame.transform.scale2x(pygame.image.load('assets/bluebird-downflap.png').convert_alpha())
@@ -260,19 +281,21 @@ while True:
             game_active = True
             pipe_list.clear()
             laser_list.clear()
+            laser_color_list.clear()
             bird_rect.center = (100, 512)
             bird_movement = -4
             score = 0
             score_sound_countdown = 300
             bg_surface_night.set_alpha(0)
+            bird_color = 'blue'
 
         if event.type == SPAWNPIPE and game_active:
-            print('pipe')
             pipe_list.extend(create_pipe())
 
         if event.type == SPAWNLASER and game_active:
-            print('laser')
-            laser_list.append(create_laser(laser_color))
+            laser_list.append(create_laser())
+            laser_color_list.append(laser_color)
+            laser_color = random.randint(0, 2)
 
         if event.type == BIRDFLAP and keys[pygame.K_SPACE]:
             if bird_index < 2:
@@ -300,8 +323,8 @@ while True:
         game_active = not check_collision(pipe_list)
 
         # Lasers
-        laser_list = move_lasers(laser_list)
-        draw_lasers(laser_list)
+        laser_list, laser_color_list = move_lasers(laser_list, laser_color_list)
+        draw_lasers(laser_list, laser_color_list)
 
         # Pipes
         pipe_list = move_pipes(pipe_list)
