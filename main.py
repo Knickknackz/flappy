@@ -6,11 +6,12 @@ sWidth, sHeight = 576, 1024
 def draw_floor():
     screen.blit(floor_surface, (floor_x_pos, 900))
     screen.blit(floor_surface, (floor_x_pos + sWidth, 900))
-
+    screen.blit(controls_surface, (125, 920))
 
 def draw_bg():
     screen.blit(bg_surface, (bg_x_pos, 0))
     screen.blit(bg_surface, (bg_x_pos + sWidth, 0))
+
 
 
 def draw_night():
@@ -195,7 +196,8 @@ GAP_SIZE = [250, 500]
 laser_color = random.randint(0, 2)
 bird_color = 0
 
-controls_surface = pygame.transform.scale2x(pygame.image.load('assets/base_controls.png').convert_alpha())
+controls_surface = pygame.image.load('assets/base_controls.png').convert_alpha()
+controls_rect = controls_surface.get_rect(center=(288, 512))
 
 bg_surface = pygame.transform.scale2x(pygame.image.load('assets/background-day.png').convert())
 bg_surface_night = pygame.transform.scale2x(pygame.image.load('assets/background-night.png').convert_alpha())
